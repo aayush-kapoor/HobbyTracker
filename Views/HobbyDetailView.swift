@@ -1,131 +1,164 @@
 import SwiftUI
 
+// MARK: - Color Theme System
+enum HobbyTheme {
+    case red, green, blue
+    
+    var backgroundColor: Color {
+        switch self {
+        case .red: return Color(hex: "#FFF2F2")
+        case .green: return Color(hex: "#F2FFF5") 
+        case .blue: return Color(hex: "#F2F9FF")
+        }
+    }
+    
+    var textColor: Color {
+        switch self {
+        case .red: return Color(hex: "#471515")
+        case .green: return Color(hex: "#14401D")
+        case .blue: return Color(hex: "#153047")
+        }
+    }
+    
+    var startStopButtonColor: Color {
+        switch self {
+        case .red: return Color(hex: "#FF7C7C")
+        case .green: return Color(hex: "#8CE8A1")
+        case .blue: return Color(hex: "#8BCAFF")
+        }
+    }
+    
+    var otherButtonColor: Color {
+        switch self {
+        case .red: return Color(hex: "#FFD9D9")
+        case .green: return Color(hex: "#DAFAE0")
+        case .blue: return Color(hex: "#D9EEFF")
+        }
+    }
+}
+
+
+
 struct HobbyDetailView: View {
     let hobby: Hobby
     @ObservedObject var hobbyManager: HobbyManager
     @State private var showingSessionNotes = false
     @State private var sessionNotes = ""
     
+    // Determine theme based on hobby name (you can modify this logic)
+    private var theme: HobbyTheme {
+        let hobbyName = hobby.name.lowercased()
+        if hobbyName.contains("cook") || hobbyName.contains("baking") || hobbyName.contains("chef") {
+            return .green
+        } else if hobbyName.contains("guitar") || hobbyName.contains("music") || hobbyName.contains("piano") || hobbyName.contains("instrument") {
+            return .red
+        } else if hobbyName.contains("cod") || hobbyName.contains("program") || hobbyName.contains("tech") || hobbyName.contains("computer") {
+            return .blue
+        } else {
+            // Default cycle based on hash of hobby name
+            let hash = abs(hobby.name.hashValue)
+            switch hash % 3 {
+            case 0: return .red
+            case 1: return .green
+            default: return .blue
+            }
+        }
+    }
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            // Header
+        VStack(spacing: 0) {
+            Spacer()
+            
+            // Hobby name pill
             HStack {
-                Circle()
-                    .fill(Color(hex: hobby.color))
-                    .frame(width: 24, height: 24)
+                // Icon based on hobby type
+                Image(systemName: getHobbyIcon())
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(theme.textColor)
                 
-                VStack(alignment: .leading) {
-                    Text(hobby.name)
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.black)
-                    
-                    if !hobby.description.isEmpty {
-                        Text(hobby.description)
-                            .font(.system(size: 16, weight: .regular))
-                            .foregroundColor(.gray)
-                    }
-                }
-                
-                Spacer()
-                
-                // Track time button and current timer
-                VStack(spacing: 8) {
-                    if hobbyManager.isTracking && hobbyManager.selectedHobby?.id == hobby.id {
-                        // Show current elapsed time with animation
-                        Text(hobbyManager.formattedElapsedTime)
-                            .font(.system(size: 32, weight: .bold, design: .monospaced))
-                            .foregroundColor(.black)
-                            .contentTransition(.numericText())
-                            .animation(.smooth(duration: 0.6), value: hobbyManager.formattedElapsedTime)
-                            .scaleEffect(hobbyManager.isTracking ? 1.05 : 1.0)
-                            .animation(.easeInOut(duration: 0.3), value: hobbyManager.isTracking)
-                            .padding(.vertical, 8)
-                        
-                        Button("Stop Tracking") {
-                            hobbyManager.pauseTracking()
-                            showingSessionNotes = true
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
-                        .tint(.black)
-                    } else {
-                        Button("Start Tracking") {
-                            hobbyManager.startTracking(for: hobby)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
-                        .tint(.black)
-                        .disabled(hobbyManager.isTracking)
-                    }
-                }
+                Text(hobby.name)
+                    .font(.system(size: 22, weight: .bold, design: .default))
+                    .foregroundColor(theme.textColor)
             }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
+            .background(Color.white)
+            .cornerRadius(25)
+            .overlay(
+                RoundedRectangle(cornerRadius: 25)
+                    .stroke(theme.textColor.opacity(0.2), lineWidth: 1.5)
+            )
             
-            Divider()
+            Spacer()
             
-            // Stats
-            HStack(spacing: 40) {
-                VStack(alignment: .leading) {
-                    Text("Total Time")
-                        .font(.system(size: 16, weight: .regular))
-                        .foregroundColor(.gray)
-                    Text(hobby.formattedTotalTime)
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.black)
-                }
-                
-                VStack(alignment: .leading) {
-                    Text("Sessions")
-                        .font(.system(size: 16, weight: .regular))
-                        .foregroundColor(.gray)
-                    Text("\(hobby.sessions.count)")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.black)
-                }
-                
-                // Show current session status
+            // Large timer display
+            VStack(spacing: 8) {
                 if hobbyManager.isTracking && hobbyManager.selectedHobby?.id == hobby.id {
-                    VStack(alignment: .leading) {
-                        Text("Current Session")
-                            .font(.system(size: 16, weight: .regular))
-                            .foregroundColor(.gray)
-                        Text(hobbyManager.formattedElapsedTime)
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.black)
-                            .contentTransition(.numericText())
-                            .animation(.smooth(duration: 0.6), value: hobbyManager.formattedElapsedTime)
-                    }
+                    Text(hobbyManager.formattedElapsedTimeMMSS)
+                        .font(.system(size: 120, weight: .black, design: .monospaced))
+                        .foregroundColor(theme.textColor)
+                        .contentTransition(.numericText())
+                        .animation(.smooth(duration: 0.6), value: hobbyManager.formattedElapsedTimeMMSS)
+                        .scaleEffect(hobbyManager.isTracking ? 1.02 : 1.0)
+                        .animation(.easeInOut(duration: 0.3), value: hobbyManager.isTracking)
+                } else {
+                    Text("00:00")
+                        .font(.system(size: 120, weight: .black, design: .monospaced))
+                        .foregroundColor(theme.textColor)
                 }
-                
-                Spacer()
             }
             
-            Divider()
+            Spacer()
             
-            // Recent Sessions
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Recent Sessions")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.black)
+            // Control buttons
+            HStack(spacing: 40) {
+                // Menu/Options button
+                Button(action: {
+                    // TODO: Add menu functionality
+                }) {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(theme.textColor)
+                        .frame(width: 60, height: 60)
+                        .background(theme.otherButtonColor)
+                        .cornerRadius(30)
+                }
                 
-                if hobby.sessions.isEmpty {
-                    Text("No sessions yet. Start tracking to see your progress!")
-                        .foregroundColor(.gray)
-                        .italic()
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: 8) {
-                            ForEach(hobby.sessions.sorted { $0.startTime > $1.startTime }.prefix(10)) { session in
-                                SessionRowView(session: session)
-                            }
-                        }
+                // Start/Stop button (larger)
+                Button(action: {
+                    if hobbyManager.isTracking && hobbyManager.selectedHobby?.id == hobby.id {
+                        hobbyManager.pauseTracking()
+                        showingSessionNotes = true
+                    } else {
+                        hobbyManager.startTracking(for: hobby)
                     }
+                }) {
+                    Image(systemName: hobbyManager.isTracking && hobbyManager.selectedHobby?.id == hobby.id ? "pause.fill" : "play.fill")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(theme.textColor)
+                        .frame(width: 80, height: 60)
+                        .background(theme.startStopButtonColor)
+                        .cornerRadius(30)
+                }
+                .disabled(hobbyManager.isTracking && hobbyManager.selectedHobby?.id != hobby.id)
+                
+                // Skip/Next button
+                Button(action: {
+                    // TODO: Add skip functionality
+                }) {
+                    Image(systemName: "forward.fill")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(theme.textColor)
+                        .frame(width: 60, height: 60)
+                        .background(theme.otherButtonColor)
+                        .cornerRadius(30)
                 }
             }
             
             Spacer()
         }
-        .padding(32)
-        .background(Color.white)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(theme.backgroundColor)
         .sheet(isPresented: $showingSessionNotes) {
             SessionNotesView(
                 notes: $sessionNotes,
@@ -140,7 +173,44 @@ struct HobbyDetailView: View {
             )
         }
     }
+    
+    private func getHobbyIcon() -> String {
+        let hobbyName = hobby.name.lowercased()
+        if hobbyName.contains("cook") || hobbyName.contains("baking") || hobbyName.contains("chef") {
+            return "cup.and.saucer.fill"
+        } else if hobbyName.contains("guitar") || hobbyName.contains("music") || hobbyName.contains("piano") || hobbyName.contains("instrument") {
+            return "guitars.fill"
+        } else if hobbyName.contains("cod") || hobbyName.contains("program") || hobbyName.contains("tech") || hobbyName.contains("computer") {
+            return "laptopcomputer"
+        } else {
+            return "star.fill"
+        }
+    }
 }
+
+// MARK: - Commented out Recent Sessions (for later use)
+/*
+// Recent Sessions
+VStack(alignment: .leading, spacing: 12) {
+    Text("Recent Sessions")
+        .font(.system(size: 20, weight: .semibold))
+        .foregroundColor(.black)
+    
+    if hobby.sessions.isEmpty {
+        Text("No sessions yet. Start tracking to see your progress!")
+            .foregroundColor(.gray)
+            .italic()
+    } else {
+        ScrollView {
+            LazyVStack(spacing: 8) {
+                ForEach(hobby.sessions.sorted { $0.startTime > $1.startTime }.prefix(10)) { session in
+                    SessionRowView(session: session)
+                }
+            }
+        }
+    }
+}
+*/
 
 struct SessionRowView: View {
     let session: TimeSession

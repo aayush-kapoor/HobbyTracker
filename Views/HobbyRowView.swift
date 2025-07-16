@@ -13,12 +13,12 @@ struct HobbyRowView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(hobby.name)
                     .font(.headline)
-                    .foregroundColor(.black)
+                    .foregroundColor(.primary)
                     .lineLimit(1)
                 
                 Text(hobby.formattedTotalTime)
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
             }
             
             Spacer()

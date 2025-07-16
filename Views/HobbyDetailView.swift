@@ -52,7 +52,7 @@ struct HobbyDetailView: View {
             return .green
         } else if hobbyName.contains("guitar") || hobbyName.contains("music") || hobbyName.contains("piano") || hobbyName.contains("instrument") {
             return .red
-        } else if hobbyName.contains("cod") || hobbyName.contains("program") || hobbyName.contains("tech") || hobbyName.contains("computer") {
+        } else if hobbyName.contains("cod") || hobbyName.contains("program") || hobbyName.contains("tech") || hobbyName.contains("computer") || hobbyName.contains("photo") {
             return .blue
         } else {
             // Default cycle based on hash of hobby name
@@ -82,12 +82,8 @@ struct HobbyDetailView: View {
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
-            .background(Color.white)
+            .background(theme.otherButtonColor)
             .cornerRadius(25)
-            .overlay(
-                RoundedRectangle(cornerRadius: 25)
-                    .stroke(theme.textColor.opacity(0.2), lineWidth: 1.5)
-            )
             
             Spacer()
             
@@ -123,6 +119,7 @@ struct HobbyDetailView: View {
                         .background(theme.otherButtonColor)
                         .cornerRadius(30)
                 }
+                .buttonStyle(PlainButtonStyle())
                 
                 // Start/Stop button (larger)
                 Button(action: {
@@ -140,6 +137,7 @@ struct HobbyDetailView: View {
                         .background(theme.startStopButtonColor)
                         .cornerRadius(30)
                 }
+                .buttonStyle(PlainButtonStyle())
                 .disabled(hobbyManager.isTracking && hobbyManager.selectedHobby?.id != hobby.id)
                 
                 // Skip/Next button
@@ -153,6 +151,7 @@ struct HobbyDetailView: View {
                         .background(theme.otherButtonColor)
                         .cornerRadius(30)
                 }
+                .buttonStyle(PlainButtonStyle())
             }
             
             Spacer()

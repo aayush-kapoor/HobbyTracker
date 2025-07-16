@@ -5,64 +5,60 @@ struct AddHobbyView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var name = ""
-    @State private var description = ""
-    @State private var selectedColor = "#007AFF"
+    @FocusState private var isTextFieldFocused: Bool
     
     private let colors = [
         "#007AFF", "#FF6B6B", "#4ECDC4", "#45B7D1",
-        "#96CEB4", "#FECA57", "#FF9FF3", "#54A0FF",
-        "#5F27CD", "#00D2D3", "#FF9F43", "#EE5A24"
+        "#96CEB4", "#FECA57", "#FF9FF3", "#54A0FF"
     ]
     
     var body: some View {
-        NavigationView {
-            Form {
-                Section("Hobby Details") {
-                    TextField("Name", text: $name)
-                        .textFieldStyle(.roundedBorder)
-                    
-                    TextField("Description (optional)", text: $description, axis: .vertical)
-                        .textFieldStyle(.roundedBorder)
-                        .lineLimit(3...6)
-                }
+        VStack(spacing: 30) {
+            // Title
+            Text("Add New Hobby")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.primary)
+            
+            // Input field
+            VStack(alignment: .leading, spacing: 8) {
                 
-                Section("Color") {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 12) {
-                        ForEach(colors, id: \.self) { color in
-                            Circle()
-                                .fill(Color(hex: color))
-                                .frame(width: 30, height: 30)
-                                .overlay(
-                                    Circle()
-                                        .stroke(selectedColor == color ? Color.primary : Color.clear, lineWidth: 2)
-                                )
-                                .onTapGesture {
-                                    selectedColor = color
-                                }
-                        }
-                    }
-                }
+                TextField("Enter hobby name", text: $name)
+                    .font(.system(size: 20, weight: .bold))
+                    .textFieldStyle(.plain)
+                    .padding(16)
+                    .background(Color.secondary.opacity(0.1))
+                    .cornerRadius(12)
+                    .focused($isTextFieldFocused)
             }
-            .navigationTitle("New Hobby")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+            
+            Spacer()
+            
+            // Buttons
+            HStack(spacing: 12) {
+                Button("Cancel") {
+                    dismiss()
                 }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
                 
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
-                        let hobby = Hobby(name: name, description: description, color: selectedColor)
-                        hobbyManager.addHobby(hobby)
-                        dismiss()
-                    }
-                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Button("Save") {
+                    let randomColor = colors.randomElement() ?? "#007AFF"
+                    let hobby = Hobby(name: name.trimmingCharacters(in: .whitespacesAndNewlines), 
+                                    description: "", 
+                                    color: randomColor)
+                    hobbyManager.addHobby(hobby)
+                    dismiss()
                 }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
-        .frame(width: 400, height: 500)
-        .background(Color.white)
+        .padding(40)
+        .background(Color(NSColor.windowBackgroundColor))
+        .onAppear {
+            isTextFieldFocused = true
+        }
     }
 }
 

@@ -90,14 +90,14 @@ struct HobbyDetailView: View {
             
             // Large timer display - shows total time for hobby
             VStack(spacing: 8) {
-                if hobbyManager.isTracking && hobbyManager.selectedHobby?.id == hobby.id {
-                    Text(hobbyManager.formattedElapsedTimeMMSS)
+                if hobbyManager.isTracking(hobby: hobby) {
+                    Text(hobbyManager.formattedElapsedTimeMMSS(for: hobby))
                         .font(.system(size: 120, weight: .black, design: .monospaced))
                         .foregroundColor(theme.textColor)
                         .contentTransition(.numericText())
-                        .animation(.smooth(duration: 0.6), value: hobbyManager.formattedElapsedTimeMMSS)
-                        .scaleEffect(hobbyManager.isTracking ? 1.02 : 1.0)
-                        .animation(.easeInOut(duration: 0.3), value: hobbyManager.isTracking)
+                        .animation(.smooth(duration: 0.6), value: hobbyManager.formattedElapsedTimeMMSS(for: hobby))
+                        .scaleEffect(hobbyManager.isTracking(hobby: hobby) ? 1.0 : 1.0)
+                        .animation(.easeInOut(duration: 0.3), value: hobbyManager.isTracking(hobby: hobby))
                 } else {
                     Text(formattedHobbyTotalTime)
                         .font(.system(size: 120, weight: .black, design: .monospaced))
@@ -124,13 +124,13 @@ struct HobbyDetailView: View {
                 
                 // Start/Stop button (larger)
                 Button(action: {
-                    if hobbyManager.isTracking && hobbyManager.selectedHobby?.id == hobby.id {
-                        hobbyManager.pauseTracking()
+                    if hobbyManager.isTracking(hobby: hobby) {
+                        hobbyManager.pauseTracking(for: hobby)
                     } else {
                         hobbyManager.startTracking(for: hobby)
                     }
                 }) {
-                    Image(systemName: hobbyManager.isTracking && hobbyManager.selectedHobby?.id == hobby.id ? "pause.fill" : "play.fill")
+                    Image(systemName: hobbyManager.isTracking(hobby: hobby) ? "pause.fill" : "play.fill")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(theme.textColor)
                         .frame(width: 80, height: 60)
@@ -138,7 +138,6 @@ struct HobbyDetailView: View {
                         .cornerRadius(30)
                 }
                 .buttonStyle(PlainButtonStyle())
-                .disabled(hobbyManager.isTracking && hobbyManager.selectedHobby?.id != hobby.id)
                 
                 // Skip/Next button
                 Button(action: {

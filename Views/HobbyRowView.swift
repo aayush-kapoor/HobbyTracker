@@ -34,7 +34,7 @@ struct HobbyRowView: View {
     
     private var backgroundColor: Color {
         if isSelected {
-            return .accentColor
+            return Color.primary.opacity(0.1)
         } else if isHovered {
             return Color.primary.opacity(0.1)
         } else {

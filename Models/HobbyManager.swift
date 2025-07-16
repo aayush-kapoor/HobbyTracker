@@ -5,13 +5,14 @@ class HobbyManager: ObservableObject {
     @Published var hobbies: [Hobby] = []
     @Published var selectedHobby: Hobby?
     @Published var currentSession: TimeSession?
-    @Published var isTracking: Bool = false
-    @Published var currentElapsedTime: TimeInterval = 0
+    
+    // Track multiple hobbies simultaneously
+    @Published var trackingStates: [UUID: Bool] = [:]
+    @Published var currentElapsedTimes: [UUID: TimeInterval] = [:]
     
     private let saveKey = "SavedHobbies"
-    private var trackingStartTime: Date?
-    private var timer: Timer?
-    private var finalElapsedTime: TimeInterval = 0
+    private var trackingStartTimes: [UUID: Date] = [:]
+    private var timers: [UUID: Timer] = [:]
     
     init() {
         loadHobbies()
@@ -29,6 +30,10 @@ class HobbyManager: ObservableObject {
         if selectedHobby?.id == hobby.id {
             selectedHobby = nil
         }
+        // Clean up tracking state
+        stopTracking(for: hobby)
+        trackingStates.removeValue(forKey: hobby.id)
+        currentElapsedTimes.removeValue(forKey: hobby.id)
         saveHobbies()
     }
     
@@ -49,88 +54,77 @@ class HobbyManager: ObservableObject {
     // MARK: - Time Tracking
     
     func startTracking(for hobby: Hobby) {
-        guard !isTracking else { return }
+        guard !isTracking(hobby: hobby) else { return }
         
-        isTracking = true
-        trackingStartTime = Date()
-        // Start from the hobby's existing total time
-        currentElapsedTime = hobby.totalTime
+        trackingStates[hobby.id] = true
+        trackingStartTimes[hobby.id] = Date()
+        currentElapsedTimes[hobby.id] = hobby.totalTime
         
         // Start the timer to update elapsed time every 0.1 seconds for smooth updates
-        timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
             DispatchQueue.main.async {
-                self?.updateElapsedTime()
+                self?.updateElapsedTime(for: hobby)
             }
         }
-        RunLoop.main.add(timer!, forMode: .common)
+        timers[hobby.id] = timer
+        RunLoop.main.add(timer, forMode: .common)
     }
     
-    private func updateElapsedTime() {
-        guard let startTime = trackingStartTime, let hobby = selectedHobby else { return }
-        // Add the session elapsed time to the hobby's existing total
-        currentElapsedTime = hobby.totalTime + Date().timeIntervalSince(startTime)
-    }
-    
-    func pauseTracking() {
-        // Stop the timer and save the current total time
-        guard isTracking, let hobby = selectedHobby else { return }
+    private func updateElapsedTime(for hobby: Hobby) {
+        guard let startTime = trackingStartTimes[hobby.id],
+              isTracking(hobby: hobby) else { return }
         
-        timer?.invalidate()
-        timer = nil
+        // Add the session elapsed time to the hobby's existing total
+        currentElapsedTimes[hobby.id] = hobby.totalTime + Date().timeIntervalSince(startTime)
+    }
+    
+    func pauseTracking(for hobby: Hobby) {
+        guard isTracking(hobby: hobby) else { return }
+        
+        // Stop the timer and save the current total time
+        timers[hobby.id]?.invalidate()
+        timers.removeValue(forKey: hobby.id)
         
         // Save the current elapsed time as the hobby's total time
-        var updatedHobby = hobby
-        updatedHobby.totalTime = currentElapsedTime
-        updateHobby(updatedHobby)
+        if let currentTime = currentElapsedTimes[hobby.id] {
+            var updatedHobby = hobby
+            updatedHobby.totalTime = currentTime
+            updateHobby(updatedHobby)
+        }
         
-        // Reset tracking state
-        isTracking = false
-        trackingStartTime = nil
-        finalElapsedTime = 0
+        // Reset tracking state for this hobby
+        trackingStates[hobby.id] = false
+        trackingStartTimes.removeValue(forKey: hobby.id)
     }
     
-    func stopTracking(with notes: String = "") {
-        guard let hobby = selectedHobby, let startTime = trackingStartTime else { return }
-        
-        // Simply update the hobby's total time with the current elapsed time
-        var updatedHobby = hobby
-        updatedHobby.totalTime = currentElapsedTime
-        
-        updateHobby(updatedHobby)
-        
-        // Reset tracking state
-        isTracking = false
-        trackingStartTime = nil
-        currentElapsedTime = 0
-        finalElapsedTime = 0
-        
-        // COMMENTED OUT: Session tracking code
-        /*
-        let endTime = startTime.addingTimeInterval(finalElapsedTime)
-        let session = TimeSession(startTime: startTime, endTime: endTime, notes: notes)
-        
-        var updatedHobby = hobby
-        updatedHobby.sessions.append(session)
-        updatedHobby.totalTime += session.duration
-        */
+    func stopTracking(for hobby: Hobby) {
+        // Same as pause for now - just stop and save
+        pauseTracking(for: hobby)
     }
     
-    func cancelTracking() {
-        // Stop the timer without saving a session
-        timer?.invalidate()
-        timer = nil
+    func cancelTracking(for hobby: Hobby) {
+        // Stop the timer without saving
+        timers[hobby.id]?.invalidate()
+        timers.removeValue(forKey: hobby.id)
         
-        // Reset tracking state
-        isTracking = false
-        trackingStartTime = nil
-        currentElapsedTime = 0
-        finalElapsedTime = 0
+        // Reset tracking state without saving time
+        trackingStates[hobby.id] = false
+        trackingStartTimes.removeValue(forKey: hobby.id)
+        currentElapsedTimes[hobby.id] = hobby.totalTime
     }
     
     // MARK: - Helper Methods
     
-    var formattedElapsedTime: String {
-        let totalSeconds = Int(currentElapsedTime)
+    func isTracking(hobby: Hobby) -> Bool {
+        return trackingStates[hobby.id] ?? false
+    }
+    
+    func currentElapsedTime(for hobby: Hobby) -> TimeInterval {
+        return currentElapsedTimes[hobby.id] ?? hobby.totalTime
+    }
+    
+    func formattedElapsedTime(for hobby: Hobby) -> String {
+        let totalSeconds = Int(currentElapsedTime(for: hobby))
         let hours = totalSeconds / 3600
         let minutes = (totalSeconds % 3600) / 60
         let seconds = totalSeconds % 60
@@ -142,15 +136,16 @@ class HobbyManager: ObservableObject {
         }
     }
     
-    var formattedElapsedTimeMMSS: String {
-        let totalSeconds = Int(currentElapsedTime)
+    func formattedElapsedTimeMMSS(for hobby: Hobby) -> String {
+        let totalSeconds = Int(currentElapsedTime(for: hobby))
         let minutes = totalSeconds / 60
         let seconds = totalSeconds % 60
         return String(format: "%02d:%02d", minutes, seconds)
     }
     
     deinit {
-        timer?.invalidate()
+        // Clean up all timers
+        timers.values.forEach { $0.invalidate() }
     }
     
     // MARK: - Persistence

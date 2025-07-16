@@ -15,19 +15,15 @@ struct AddHobbyView: View {
     var body: some View {
         VStack(spacing: 30) {
             // Title
-            Text("Add New Hobby")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.primary)
-            
+//            Text("Add New Hobby")
+//                .font(.system(size: 24, weight: .bold))
+//                .foregroundColor(.primary)
+//            
             // Input field
             VStack(alignment: .leading, spacing: 8) {
-                
                 TextField("Enter hobby name", text: $name)
-                    .font(.system(size: 20, weight: .bold))
-                    .textFieldStyle(.plain)
-                    .padding(16)
-                    .background(Color.secondary.opacity(0.1))
-                    .cornerRadius(12)
+                    .font(.system(size: 20, weight: .regular))
+                    .textFieldStyle(UnderlinedTextFieldStyle())
                     .focused($isTextFieldFocused)
             }
             
@@ -54,6 +50,7 @@ struct AddHobbyView: View {
                 .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
+        .frame(width: 450, height: 300)
         .padding(40)
         .background(Color(NSColor.windowBackgroundColor))
         .onAppear {

@@ -53,7 +53,8 @@ class HobbyManager: ObservableObject {
         
         isTracking = true
         trackingStartTime = Date()
-        currentElapsedTime = 0
+        // Start from the hobby's existing total time
+        currentElapsedTime = hobby.totalTime
         
         // Start the timer to update elapsed time every 0.1 seconds for smooth updates
         timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
@@ -65,30 +66,35 @@ class HobbyManager: ObservableObject {
     }
     
     private func updateElapsedTime() {
-        guard let startTime = trackingStartTime else { return }
-        currentElapsedTime = Date().timeIntervalSince(startTime)
+        guard let startTime = trackingStartTime, let hobby = selectedHobby else { return }
+        // Add the session elapsed time to the hobby's existing total
+        currentElapsedTime = hobby.totalTime + Date().timeIntervalSince(startTime)
     }
     
     func pauseTracking() {
-        // Stop the timer and capture the final elapsed time
-        guard isTracking, let startTime = trackingStartTime else { return }
+        // Stop the timer and save the current total time
+        guard isTracking, let hobby = selectedHobby else { return }
         
         timer?.invalidate()
         timer = nil
         
-        finalElapsedTime = Date().timeIntervalSince(startTime)
-        currentElapsedTime = finalElapsedTime
+        // Save the current elapsed time as the hobby's total time
+        var updatedHobby = hobby
+        updatedHobby.totalTime = currentElapsedTime
+        updateHobby(updatedHobby)
+        
+        // Reset tracking state
+        isTracking = false
+        trackingStartTime = nil
+        finalElapsedTime = 0
     }
     
     func stopTracking(with notes: String = "") {
         guard let hobby = selectedHobby, let startTime = trackingStartTime else { return }
         
-        let endTime = startTime.addingTimeInterval(finalElapsedTime)
-        let session = TimeSession(startTime: startTime, endTime: endTime, notes: notes)
-        
+        // Simply update the hobby's total time with the current elapsed time
         var updatedHobby = hobby
-        updatedHobby.sessions.append(session)
-        updatedHobby.totalTime += session.duration
+        updatedHobby.totalTime = currentElapsedTime
         
         updateHobby(updatedHobby)
         
@@ -97,6 +103,16 @@ class HobbyManager: ObservableObject {
         trackingStartTime = nil
         currentElapsedTime = 0
         finalElapsedTime = 0
+        
+        // COMMENTED OUT: Session tracking code
+        /*
+        let endTime = startTime.addingTimeInterval(finalElapsedTime)
+        let session = TimeSession(startTime: startTime, endTime: endTime, notes: notes)
+        
+        var updatedHobby = hobby
+        updatedHobby.sessions.append(session)
+        updatedHobby.totalTime += session.duration
+        */
     }
     
     func cancelTracking() {

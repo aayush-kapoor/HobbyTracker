@@ -42,8 +42,9 @@ enum HobbyTheme {
 struct HobbyDetailView: View {
     let hobby: Hobby
     @ObservedObject var hobbyManager: HobbyManager
-    @State private var showingSessionNotes = false
-    @State private var sessionNotes = ""
+    // COMMENTED OUT: Session-related state variables
+    // @State private var showingSessionNotes = false
+    // @State private var sessionNotes = ""
     
     // Determine theme based on hobby name (you can modify this logic)
     private var theme: HobbyTheme {
@@ -87,7 +88,7 @@ struct HobbyDetailView: View {
             
             Spacer()
             
-            // Large timer display
+            // Large timer display - shows total time for hobby
             VStack(spacing: 8) {
                 if hobbyManager.isTracking && hobbyManager.selectedHobby?.id == hobby.id {
                     Text(hobbyManager.formattedElapsedTimeMMSS)
@@ -98,7 +99,7 @@ struct HobbyDetailView: View {
                         .scaleEffect(hobbyManager.isTracking ? 1.02 : 1.0)
                         .animation(.easeInOut(duration: 0.3), value: hobbyManager.isTracking)
                 } else {
-                    Text("00:00")
+                    Text(formattedHobbyTotalTime)
                         .font(.system(size: 120, weight: .black, design: .monospaced))
                         .foregroundColor(theme.textColor)
                 }
@@ -125,7 +126,6 @@ struct HobbyDetailView: View {
                 Button(action: {
                     if hobbyManager.isTracking && hobbyManager.selectedHobby?.id == hobby.id {
                         hobbyManager.pauseTracking()
-                        showingSessionNotes = true
                     } else {
                         hobbyManager.startTracking(for: hobby)
                     }
@@ -158,6 +158,9 @@ struct HobbyDetailView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.backgroundColor)
+        
+        // COMMENTED OUT: Session notes functionality
+        /*
         .sheet(isPresented: $showingSessionNotes) {
             SessionNotesView(
                 notes: $sessionNotes,
@@ -171,6 +174,14 @@ struct HobbyDetailView: View {
                 }
             )
         }
+        */
+    }
+    
+    private var formattedHobbyTotalTime: String {
+        let totalSeconds = Int(hobby.totalTime)
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%02d:%02d", minutes, seconds)
     }
     
     private func getHobbyIcon() -> String {
@@ -179,7 +190,7 @@ struct HobbyDetailView: View {
             return "cup.and.saucer.fill"
         } else if hobbyName.contains("guitar") || hobbyName.contains("music") || hobbyName.contains("piano") || hobbyName.contains("instrument") {
             return "guitars.fill"
-        } else if hobbyName.contains("cod") || hobbyName.contains("program") || hobbyName.contains("tech") || hobbyName.contains("computer") {
+        } else if hobbyName.contains("cod") || hobbyName.contains("program") || hobbyName.contains("tech") || hobbyName.contains("computer") || hobbyName.contains("photo") {
             return "laptopcomputer"
         } else {
             return "star.fill"

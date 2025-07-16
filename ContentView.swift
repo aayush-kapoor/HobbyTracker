@@ -8,11 +8,12 @@ struct ContentView: View {
         NavigationSplitView {
             // Sidebar with hobbies list
             List(hobbyManager.hobbies) { hobby in
-                HobbyRowView(hobby: hobby)
+                HobbyRowView(hobby: hobby, isSelected: hobbyManager.selectedHobby?.id == hobby.id ? true : false)
                     .onTapGesture {
                         hobbyManager.selectHobby(hobby)
                     }
                     .listRowBackground(Color(NSColor.windowBackgroundColor))
+                    .listRowSeparator(.hidden)
             }
             .navigationTitle("Hobbies")
             .background(Color(NSColor.windowBackgroundColor))

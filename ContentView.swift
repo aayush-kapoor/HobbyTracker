@@ -82,7 +82,7 @@ struct ContentView: View {
                     ProfileView(authManager: authManager)
                 }
                 .padding(.horizontal, 12)
-                .padding(.bottom, 25)
+                .padding(.bottom, 12)
             }
             .sheet(isPresented: $showingAddHobby) {
                 AddHobbyView(hobbyManager: hobbyManager)

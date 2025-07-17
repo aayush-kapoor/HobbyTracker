@@ -77,6 +77,7 @@ CREATE TABLE hobbies (
     name TEXT NOT NULL,
     description TEXT DEFAULT '',
     color TEXT DEFAULT '#007AFF',
+    theme TEXT DEFAULT 'green',
     total_time DOUBLE PRECISION DEFAULT 0,
     sessions JSONB DEFAULT '[]'::jsonb,
     created_date TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -101,6 +102,28 @@ USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own hobbies" 
 ON hobbies FOR DELETE 
 USING (auth.uid() = user_id);
+```
+
+### Database Migration for Existing Users
+
+If you already have a hobbies table without the theme column, run this migration:
+
+```sql
+-- Add theme column to existing hobbies table
+ALTER TABLE hobbies ADD COLUMN theme TEXT DEFAULT 'green';
+
+-- Update existing hobbies with themes in rotation (green, red, blue)
+WITH numbered_hobbies AS (
+  SELECT id, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_date) - 1 as row_num
+  FROM hobbies
+)
+UPDATE hobbies 
+SET theme = CASE 
+  WHEN (SELECT row_num FROM numbered_hobbies WHERE numbered_hobbies.id = hobbies.id) % 3 = 0 THEN 'green'
+  WHEN (SELECT row_num FROM numbered_hobbies WHERE numbered_hobbies.id = hobbies.id) % 3 = 1 THEN 'red'
+  ELSE 'blue'
+END
+WHERE theme IS NULL OR theme = 'green';
 ```
 
 ## Step 5: Configure Your App

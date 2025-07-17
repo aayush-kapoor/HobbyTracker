@@ -25,16 +25,11 @@ struct ProfileView: View {
             .frame(width: 32, height: 32)
             .clipShape(Circle())
             
-            // User Info
+            // User Info - Only display name
             VStack(alignment: .leading, spacing: 2) {
                 Text(authManager.userProfile?.name ?? "User")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.primary)
-                    .lineLimit(1)
-                
-                Text(authManager.userProfile?.email ?? "")
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
                     .lineLimit(1)
             }
             
@@ -73,8 +68,7 @@ struct ProfileView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color.primary.opacity(0.05))
-        .cornerRadius(8)
+        // Remove background styling to merge with sidebar
     }
     
     private var initials: String {

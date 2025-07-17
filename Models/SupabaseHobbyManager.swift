@@ -23,6 +23,15 @@ class SupabaseHobbyManager: HobbyManager {
         // Note: Hobbies will be loaded when user signs in via ContentView's onReceive handler
     }
     
+    // MARK: - Theme Queue System
+    
+    private func getNextTheme() -> HobbyTheme {
+        let themes: [HobbyTheme] = [.green, .red, .blue]
+        let currentCount = hobbies.count
+        let themeIndex = currentCount % themes.count
+        return themes[themeIndex]
+    }
+    
     // MARK: - Supabase Operations
     
     @MainActor
@@ -50,6 +59,8 @@ class SupabaseHobbyManager: HobbyManager {
             
             var newHobby = hobby
             newHobby.userId = userId
+            // Automatically assign theme based on queue
+            newHobby.theme = getNextTheme()
             
             let supabaseHobby = SupabaseHobby.from(hobby: newHobby)
             
@@ -143,12 +154,13 @@ struct SupabaseHobby: Codable {
     let name: String
     let description: String
     let color: String
+    let theme: String
     let totalTime: TimeInterval
     let sessions: [SupabaseTimeSession]
     let createdDate: Date
     
     private enum CodingKeys: String, CodingKey {
-        case id, name, description, color, sessions
+        case id, name, description, color, theme, sessions
         case userId = "user_id"
         case totalTime = "total_time"
         case createdDate = "created_date"
@@ -161,6 +173,7 @@ struct SupabaseHobby: Codable {
             name: hobby.name,
             description: hobby.description,
             color: hobby.color,
+            theme: hobby.theme.rawValue,
             totalTime: hobby.totalTime,
             sessions: hobby.sessions.map { SupabaseTimeSession.from(session: $0) },
             createdDate: hobby.createdDate
@@ -170,7 +183,8 @@ struct SupabaseHobby: Codable {
     func toHobby() -> Hobby {
         // Convert string ID back to UUID
         let hobbyId = UUID(uuidString: id) ?? UUID()
-        var hobby = Hobby(name: name, description: description, color: color, userId: userId, id: hobbyId)
+        let hobbyTheme = HobbyTheme(rawValue: theme) ?? .green
+        var hobby = Hobby(name: name, description: description, color: color, theme: hobbyTheme, userId: userId, id: hobbyId)
         hobby.totalTime = totalTime
         hobby.sessions = sessions.map { $0.toTimeSession() }
         hobby.createdDate = createdDate

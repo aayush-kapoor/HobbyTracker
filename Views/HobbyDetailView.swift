@@ -1,43 +1,38 @@
 import SwiftUI
 
-// MARK: - Color Theme System
-enum HobbyTheme {
-    case red, green, blue
+// MARK: - Visual Theme Colors mapped from HobbyTheme
+struct VisualTheme {
+    let backgroundColor: Color
+    let textColor: Color
+    let startStopButtonColor: Color
+    let otherButtonColor: Color
     
-    var backgroundColor: Color {
-        switch self {
-        case .red: return Color(hex: "#FFF2F2")
-        case .green: return Color(hex: "#F2FFF5") 
-        case .blue: return Color(hex: "#F2F9FF")
-        }
-    }
-    
-    var textColor: Color {
-        switch self {
-        case .red: return Color(hex: "#471515")
-        case .green: return Color(hex: "#14401D")
-        case .blue: return Color(hex: "#153047")
-        }
-    }
-    
-    var startStopButtonColor: Color {
-        switch self {
-        case .red: return Color(hex: "#FF7C7C")
-        case .green: return Color(hex: "#8CE8A1")
-        case .blue: return Color(hex: "#8BCAFF")
-        }
-    }
-    
-    var otherButtonColor: Color {
-        switch self {
-        case .red: return Color(hex: "#FFD9D9")
-        case .green: return Color(hex: "#DAFAE0")
-        case .blue: return Color(hex: "#D9EEFF")
+    static func from(_ hobbyTheme: HobbyTheme) -> VisualTheme {
+        switch hobbyTheme {
+        case .red:
+            return VisualTheme(
+                backgroundColor: Color(hex: "#FFF2F2"),
+                textColor: Color(hex: "#471515"),
+                startStopButtonColor: Color(hex: "#FF7C7C"),
+                otherButtonColor: Color(hex: "#FFD9D9")
+            )
+        case .green:
+            return VisualTheme(
+                backgroundColor: Color(hex: "#F2FFF5"),
+                textColor: Color(hex: "#14401D"),
+                startStopButtonColor: Color(hex: "#8CE8A1"),
+                otherButtonColor: Color(hex: "#DAFAE0")
+            )
+        case .blue:
+            return VisualTheme(
+                backgroundColor: Color(hex: "#F2F9FF"),
+                textColor: Color(hex: "#153047"),
+                startStopButtonColor: Color(hex: "#8BCAFF"),
+                otherButtonColor: Color(hex: "#D9EEFF")
+            )
         }
     }
 }
-
-
 
 struct HobbyDetailView: View {
     let hobby: Hobby
@@ -46,24 +41,9 @@ struct HobbyDetailView: View {
     // @State private var showingSessionNotes = false
     // @State private var sessionNotes = ""
     
-    // Determine theme based on hobby name (you can modify this logic)
-    private var theme: HobbyTheme {
-        let hobbyName = hobby.name.lowercased()
-        if hobbyName.contains("cook") || hobbyName.contains("baking") || hobbyName.contains("chef") {
-            return .green
-        } else if hobbyName.contains("guitar") || hobbyName.contains("music") || hobbyName.contains("piano") || hobbyName.contains("instrument") {
-            return .red
-        } else if hobbyName.contains("cod") || hobbyName.contains("program") || hobbyName.contains("tech") || hobbyName.contains("computer") || hobbyName.contains("photo") {
-            return .blue
-        } else {
-            // Default cycle based on hash of hobby name
-            let hash = abs(hobby.name.hashValue)
-            switch hash % 3 {
-            case 0: return .red
-            case 1: return .green
-            default: return .blue
-            }
-        }
+    // Use stored theme from hobby model
+    private var theme: VisualTheme {
+        return VisualTheme.from(hobby.theme)
     }
     
     var body: some View {

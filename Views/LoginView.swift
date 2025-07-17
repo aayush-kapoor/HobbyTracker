@@ -51,7 +51,7 @@ struct LoginView: View {
                                 // Google Logo (using G icon)
                                 Text("G")
                                     .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.primary)
+                                    .foregroundColor(.secondary)
                                     .frame(width: 24, height: 24)
                                     .background(Circle().fill(Color.white))
                                 

@@ -107,51 +107,23 @@ struct HobbyDetailView: View {
             
             Spacer()
             
-            // Control buttons
-            HStack(spacing: 40) {
-                // Menu/Options button
-                Button(action: {
-                    // TODO: Add menu functionality
-                }) {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(theme.textColor)
-                        .frame(width: 60, height: 60)
-                        .background(theme.otherButtonColor)
-                        .cornerRadius(30)
+            // Control button
+            // Start/Stop button
+            Button(action: {
+                if hobbyManager.isTracking(hobby: hobby) {
+                    hobbyManager.pauseTracking(for: hobby)
+                } else {
+                    hobbyManager.startTracking(for: hobby)
                 }
-                .buttonStyle(PlainButtonStyle())
-                
-                // Start/Stop button (larger)
-                Button(action: {
-                    if hobbyManager.isTracking(hobby: hobby) {
-                        hobbyManager.pauseTracking(for: hobby)
-                    } else {
-                        hobbyManager.startTracking(for: hobby)
-                    }
-                }) {
-                    Image(systemName: hobbyManager.isTracking(hobby: hobby) ? "pause.fill" : "play.fill")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(theme.textColor)
-                        .frame(width: 80, height: 60)
-                        .background(theme.startStopButtonColor)
-                        .cornerRadius(30)
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                // Skip/Next button
-                Button(action: {
-                    // TODO: Add skip functionality
-                }) {
-                    Image(systemName: "forward.fill")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(theme.textColor)
-                        .frame(width: 60, height: 60)
-                        .background(theme.otherButtonColor)
-                        .cornerRadius(30)
-                }
-                .buttonStyle(PlainButtonStyle())
+            }) {
+                Image(systemName: hobbyManager.isTracking(hobby: hobby) ? "pause.fill" : "play.fill")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(theme.textColor)
+                    .frame(width: 80, height: 60)
+                    .background(theme.startStopButtonColor)
+                    .cornerRadius(30)
             }
+            .buttonStyle(PlainButtonStyle())
             
             Spacer()
         }

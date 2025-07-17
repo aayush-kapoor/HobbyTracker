@@ -31,38 +31,44 @@ struct AddHobbyView: View {
             
             // Buttons
             HStack(spacing: 20) {
-                Button("Cancel") {
+                Button(action: {
                     dismiss()
+                }) {
+                    Text("Cancel")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                        .background(Color.primary.opacity(0.1))
+                        .cornerRadius(12)
                 }
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity, minHeight: 50)
-                .background(Color.primary.opacity(0.1))
-                .cornerRadius(12)
                 .buttonStyle(.plain)
+                .contentShape(Rectangle())
                 
-                Button("Save") {
+                Button(action: {
                     let randomColor = colors.randomElement() ?? "#007AFF"
                     let hobby = Hobby(name: name.trimmingCharacters(in: .whitespacesAndNewlines), 
                                     description: "", 
                                     color: randomColor)
                     hobbyManager.addHobby(hobby)
                     dismiss()
+                }) {
+                    Text("Save")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(
+                            name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty 
+                            ? Color.gray 
+                            : Color(hex: "#FFD5E6")
+                        )
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                        .background(
+                            name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty 
+                            ? Color.gray.opacity(0.2)
+                            : Color(hex: "#3F162A")
+                        )
+                        .cornerRadius(12)
                 }
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(
-                    name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty 
-                    ? Color.gray 
-                    : Color(hex: "#FFD5E6")
-                )
-                .frame(maxWidth: .infinity, minHeight: 50)
-                .background(
-                    name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty 
-                    ? Color.gray.opacity(0.2)
-                    : Color(hex: "#3F162A")
-                )
-                .cornerRadius(12)
                 .buttonStyle(.plain)
+                .contentShape(Rectangle())
                 .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding(.horizontal, 20)

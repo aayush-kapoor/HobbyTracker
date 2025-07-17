@@ -30,12 +30,16 @@ struct AddHobbyView: View {
             Spacer()
             
             // Buttons
-            HStack(spacing: 12) {
+            HStack(spacing: 20) {
                 Button("Cancel") {
                     dismiss()
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity, minHeight: 50)
+                .background(Color.primary.opacity(0.1))
+                .cornerRadius(12)
+                .buttonStyle(.plain)
                 
                 Button("Save") {
                     let randomColor = colors.randomElement() ?? "#007AFF"
@@ -45,10 +49,23 @@ struct AddHobbyView: View {
                     hobbyManager.addHobby(hobby)
                     dismiss()
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(
+                    name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty 
+                    ? Color.gray 
+                    : Color(hex: "#FFD5E6")
+                )
+                .frame(maxWidth: .infinity, minHeight: 50)
+                .background(
+                    name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty 
+                    ? Color.gray.opacity(0.2)
+                    : Color(hex: "#3F162A")
+                )
+                .cornerRadius(12)
+                .buttonStyle(.plain)
                 .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
+            .padding(.horizontal, 20)
         }
         .frame(width: 450, height: 300)
         .padding(40)
@@ -58,6 +75,8 @@ struct AddHobbyView: View {
         }
     }
 }
+
+
 
 struct AddHobbyView_Previews: PreviewProvider {
     static var previews: some View {

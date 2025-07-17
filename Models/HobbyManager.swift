@@ -41,6 +41,40 @@ class HobbyManager: ObservableObject {
         selectedHobby = hobby
     }
     
+    // MARK: - Carousel Navigation
+    
+    func selectedHobbyIndex() -> Int? {
+        guard let selectedHobby = selectedHobby else { return nil }
+        return hobbies.firstIndex(where: { $0.id == selectedHobby.id })
+    }
+    
+    func selectNextHobby() {
+        guard !hobbies.isEmpty else { return }
+        
+        if let currentIndex = selectedHobbyIndex() {
+            let nextIndex = (currentIndex + 1) % hobbies.count
+            selectedHobby = hobbies[nextIndex]
+        } else {
+            selectedHobby = hobbies[0]
+        }
+    }
+    
+    func selectPreviousHobby() {
+        guard !hobbies.isEmpty else { return }
+        
+        if let currentIndex = selectedHobbyIndex() {
+            let previousIndex = currentIndex == 0 ? hobbies.count - 1 : currentIndex - 1
+            selectedHobby = hobbies[previousIndex]
+        } else {
+            selectedHobby = hobbies[0]
+        }
+    }
+    
+    func selectHobbyAtIndex(_ index: Int) {
+        guard index >= 0 && index < hobbies.count else { return }
+        selectedHobby = hobbies[index]
+    }
+    
     func updateHobby(_ updatedHobby: Hobby) {
         if let index = hobbies.firstIndex(where: { $0.id == updatedHobby.id }) {
             hobbies[index] = updatedHobby

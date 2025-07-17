@@ -57,7 +57,7 @@ struct LoginView: View {
                             }
                             .frame(maxWidth: 220) // Reduced button width
                             .frame(height: 44) // Reduced button height
-                            .background(colorScheme == .dark ? Color(red: 0.3, green: 0.3, blue: 0.3) : Color.white) // Dark grey for dark mode, white for light mode
+                            .background(colorScheme == .dark ? Color.gray.opacity(0.15) : Color.gray.opacity(0.25)) // Dark grey for dark mode, white for light mode
                             .cornerRadius(12)
                             .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
                         }
@@ -76,7 +76,7 @@ struct LoginView: View {
                 .padding(.vertical, 60)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(colorScheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.2) : Color(red: 0.98, green: 0.97, blue: 0.95)) // Grey for dark mode, cream for light mode
+                        .fill(colorScheme == .dark ? Color.black.opacity(0.7) : Color.white.opacity(0.75)) // Semi-transparent for both modes
                         .shadow(color: .black.opacity(0.1), radius: 20, x: 0, y: 10)
                 )
                 

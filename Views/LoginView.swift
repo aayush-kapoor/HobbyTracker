@@ -1,42 +1,32 @@
 import SwiftUI
 import GoogleSignInSwift
+import FluidGradient
 
 struct LoginView: View {
     @ObservedObject var authManager: AuthManager
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         ZStack {
-            // Dark background
-            Color(red: 0.15, green: 0.15, blue: 0.15)
+            // FluidGradient background with light shades
+            FluidGradient(blobs: [.red.opacity(0.3), .green.opacity(0.3), .blue.opacity(0.3)],
+                         speed: 0.25,
+                         blur: 0.75)
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
                 Spacer()
                 
                 VStack(spacing: 32) {
-                    // App Icon and Title Section
-                    VStack(spacing: 24) {
-                        // App Icon (using a clock icon as placeholder)
-                        ZStack {
-                            Circle()
-                                .fill(Color(red: 0.25, green: 0.25, blue: 0.25))
-                                .frame(width: 80, height: 80)
-                            
-                            Image(systemName: "clock.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(.white)
-                        }
+                    // Welcome Text Section
+                    VStack(spacing: 12) {
+                        Text("Welcome to HobbyTracker!")
+                            .font(.system(size: 25, weight: .bold))
+                            .foregroundColor(.primary)
                         
-                        // Welcome Text
-                        VStack(spacing: 12) {
-                            Text("Welcome to HobbyTracker")
-                                .font(.system(size: 36, weight: .bold))
-                                .foregroundColor(.white)
-                            
-                            Text("Track your hobbies and time spent on them")
-                                .font(.system(size: 16))
-                                .foregroundColor(.gray)
-                        }
+                        Text("Track your hobbies and time spent on them")
+                            .font(.system(size: 16))
+                            .foregroundColor(.secondary)
                     }
                     
                     // Sign in section
@@ -48,28 +38,35 @@ struct LoginView: View {
                             authManager.signInWithGoogle()
                         }) {
                             HStack(spacing: 12) {
-                                // Google Logo (using G icon)
-                                Text("G")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.secondary)
-                                    .frame(width: 24, height: 24)
-                                    .background(Circle().fill(Color.white))
+                                // Google Logo - Replace this with your custom icon
+                                // Option 1: Custom image from Assets (recommended)
+                                Image("google-icon") // Place your Google icon in Assets.xcassets with this name
+                                    .resizable()
+                                    .frame(width: 28, height: 28) // Larger icon
+                                
+                                // Option 2: If you want to keep the text version temporarily
+                                // Text("G")
+                                //     .font(.system(size: 20, weight: .bold))
+                                //     .foregroundColor(.primary)
+                                //     .frame(width: 28, height: 28)
+                                //     .background(Circle().fill(Color.white))
                                 
                                 Text("Sign in with Google")
-                                    .font(.system(size: 16, weight: .medium))
+                                    .font(.system(size: 15, weight: .medium))
                                     .foregroundColor(.primary)
                             }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 48)
-                            .background(Color(red: 0.35, green: 0.35, blue: 0.35))
-                            .cornerRadius(8)
+                            .frame(maxWidth: 220) // Reduced button width
+                            .frame(height: 44) // Reduced button height
+                            .background(colorScheme == .dark ? Color(red: 0.3, green: 0.3, blue: 0.3) : Color.white) // Dark grey for dark mode, white for light mode
+                            .cornerRadius(12)
+                            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
                         }
                         .buttonStyle(.borderless)
                         .disabled(authManager.isLoading)
                         
                         if authManager.isLoading {
                             ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .progressViewStyle(CircularProgressViewStyle(tint: .primary))
                                 .scaleEffect(0.8)
                         }
                     }
@@ -78,14 +75,16 @@ struct LoginView: View {
                 .padding(.horizontal, 40)
                 .padding(.vertical, 60)
                 .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(red: 0.2, green: 0.2, blue: 0.2))
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(colorScheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.2) : Color(red: 0.98, green: 0.97, blue: 0.95)) // Grey for dark mode, cream for light mode
+                        .shadow(color: .black.opacity(0.1), radius: 20, x: 0, y: 10)
                 )
                 
                 Spacer()
             }
             .padding(.horizontal, 60)
         }
+        // .preferredColorScheme(.light) // Force light mode for login page only
         .onAppear {
             print("🔘 LoginView: Appeared with auth state - isAuthenticated: \(authManager.isAuthenticated), isLoading: \(authManager.isLoading)")
         }

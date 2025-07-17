@@ -147,10 +147,44 @@ class AuthManager: ObservableObject {
     
     private func fetchUserProfile(user: User) async {
         print("🔑 AuthManager: Fetching user profile...")
+        print("🔍 DEBUG: Raw userMetadata: \(user.userMetadata)")
+        print("🔍 DEBUG: Raw rawUserMetadata: \(user.userMetadata)")
+        
         await MainActor.run {
-            // Safely extract metadata
-            let fullName = (user.userMetadata["full_name"] as? String) ?? user.email ?? ""
-            let avatarURL = user.userMetadata["avatar_url"] as? String
+            // Safely extract metadata from user_metadata with proper AnyJSON casting
+            let fullName: String
+            if let fullNameJSON = user.userMetadata["full_name"] {
+                print("🔍 DEBUG: Found full_name in userMetadata: \(fullNameJSON)")
+                fullName = fullNameJSON.stringValue ?? user.email ?? ""
+                print("🔍 DEBUG: Extracted full_name: '\(fullName)'")
+            } else {
+                print("🔍 DEBUG: No full_name in userMetadata, checking rawUserMetadata...")
+                if let rawFullNameJSON = user.userMetadata["full_name"] {
+                    print("🔍 DEBUG: Found full_name in rawUserMetadata: \(rawFullNameJSON)")
+                    fullName = rawFullNameJSON.stringValue ?? user.email ?? ""
+                    print("🔍 DEBUG: Extracted full_name from raw: '\(fullName)'")
+                } else {
+                    print("🔍 DEBUG: No full_name found, using email: '\(user.email ?? "")'")
+                    fullName = user.email ?? ""
+                }
+            }
+            
+            let avatarURL: String?
+            if let pictureJSON = user.userMetadata["picture"] {
+                print("🔍 DEBUG: Found picture in userMetadata: \(pictureJSON)")
+                avatarURL = pictureJSON.stringValue
+                print("🔍 DEBUG: Extracted picture URL: '\(avatarURL ?? "nil")'")
+            } else {
+                print("🔍 DEBUG: No picture in userMetadata, checking rawUserMetadata...")
+                if let rawPictureJSON = user.userMetadata["picture"] {
+                    print("🔍 DEBUG: Found picture in rawUserMetadata: \(rawPictureJSON)")
+                    avatarURL = rawPictureJSON.stringValue
+                    print("🔍 DEBUG: Extracted picture URL from raw: '\(avatarURL ?? "nil")'")
+                } else {
+                    print("🔍 DEBUG: No picture found in either metadata")
+                    avatarURL = nil
+                }
+            }
             
             self.userProfile = UserProfile(
                 id: user.id.uuidString,
@@ -159,6 +193,7 @@ class AuthManager: ObservableObject {
                 avatarURL: avatarURL
             )
             print("✅ AuthManager: User profile created for: \(fullName) (\(user.email ?? "no email"))")
+            print("🔑 AuthManager: Avatar URL: \(avatarURL ?? "none")")
         }
     }
 }

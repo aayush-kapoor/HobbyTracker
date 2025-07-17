@@ -1,7 +1,8 @@
 import Foundation
 
 struct Hobby: Identifiable, Codable {
-    let id = UUID()
+    var id: UUID
+    var userId: String? // Add user ID for Supabase
     var name: String
     var description: String
     var color: String // Store as hex string
@@ -9,10 +10,12 @@ struct Hobby: Identifiable, Codable {
     var sessions: [TimeSession]
     var createdDate: Date
     
-    init(name: String, description: String = "", color: String = "#007AFF") {
+    init(name: String, description: String = "", color: String = "#007AFF", userId: String? = nil, id: UUID = UUID()) {
+        self.id = id
         self.name = name
         self.description = description
         self.color = color
+        self.userId = userId
         self.totalTime = 0
         self.sessions = []
         self.createdDate = Date()

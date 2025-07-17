@@ -1,10 +1,53 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var hobbyManager = HobbyManager()
+    @StateObject private var authManager = AuthManager()
+    @StateObject private var hobbyManager: SupabaseHobbyManager
     @State private var showingAddHobby = false
     
+    init() {
+        print("📱 ContentView: Initializing...")
+        let authManager = AuthManager()
+        self._authManager = StateObject(wrappedValue: authManager)
+        self._hobbyManager = StateObject(wrappedValue: SupabaseHobbyManager(authManager: authManager))
+        print("📱 ContentView: Initialization complete")
+    }
+    
     var body: some View {
+        Group {
+            if authManager.isAuthenticated {
+                authenticatedView
+            } else {
+                LoginView(authManager: authManager)
+            }
+        }
+        .onAppear {
+            print("📱 ContentView: View appeared with auth state - isAuthenticated: \(authManager.isAuthenticated)")
+        }
+        .onReceive(authManager.$isAuthenticated) { isAuthenticated in
+            print("📱 ContentView: Authentication state changed to: \(isAuthenticated)")
+            if isAuthenticated {
+                print("📱 ContentView: User authenticated, loading hobbies...")
+                Task {
+                    await hobbyManager.loadHobbiesFromSupabase()
+                }
+            } else {
+                print("📱 ContentView: User not authenticated")
+            }
+        }
+        .onReceive(authManager.$currentUser) { user in
+            if let user = user {
+                print("📱 ContentView: Current user changed to: \(user.email ?? "unknown")")
+            } else {
+                print("📱 ContentView: Current user is nil")
+            }
+        }
+        .onReceive(authManager.$isLoading) { isLoading in
+            print("📱 ContentView: Loading state changed to: \(isLoading)")
+        }
+    }
+    
+    private var authenticatedView: some View {
         NavigationSplitView {
             // Sidebar with hobbies list
             List(hobbyManager.hobbies) { hobby in
@@ -19,20 +62,25 @@ struct ContentView: View {
             .background(Color(NSColor.windowBackgroundColor))
             .scrollContentBackground(.hidden)
             .safeAreaInset(edge: .bottom) {
-                Button(action: { showingAddHobby.toggle() }) {
-                    HStack {
-                        Image(systemName: "plus")
-                            .font(.system(size: 14, weight: .medium))
-                        Text("Add Hobby")
-                            .font(.system(size: 14, weight: .medium))
+                VStack(spacing: 12) {
+                    Button(action: { showingAddHobby.toggle() }) {
+                        HStack {
+                            Image(systemName: "plus")
+                                .font(.system(size: 14, weight: .medium))
+                            Text("Add Hobby")
+                                .font(.system(size: 14, weight: .medium))
+                        }
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Color.primary.opacity(0.1))
+                        .cornerRadius(8)
                     }
-                    .foregroundColor(.primary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                    .background(Color.primary.opacity(0.1))
-                    .cornerRadius(8)
+                    .buttonStyle(.borderless)
+                    
+                    // Profile section
+                    ProfileView(authManager: authManager)
                 }
-                .buttonStyle(.borderless)
                 .padding(.horizontal, 12)
                 .padding(.bottom, 25)
             }
@@ -53,8 +101,7 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(NSColor.windowBackgroundColor))
                 .clipShape(RoundedRectangle(cornerRadius: 16))
-                .padding(.leading, 8)
-                .padding(.vertical, 8)
+                .padding(8)
             } else {
                 HobbyCarouselView(hobbyManager: hobbyManager)
                     .onAppear {
@@ -85,8 +132,7 @@ struct HobbyCarouselView: View {
                 ForEach(Array(hobbyManager.hobbies.enumerated()), id: \.element.id) { index, hobby in
                     HobbyDetailView(hobby: hobby, hobbyManager: hobbyManager)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .padding(.leading, 8)
-                        .padding(.vertical, 8)
+                        .padding(8)
                         .frame(width: cardWidth)
                 }
             }

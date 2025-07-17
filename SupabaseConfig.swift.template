@@ -1,0 +1,10 @@
+import Foundation
+
+struct SupabaseConfig {
+    // REPLACE THESE VALUES WITH YOUR SUPABASE PROJECT SETTINGS
+    static let supabaseURL = "YOUR_SUPABASE_URL_HERE" // e.g., "https://your-project.supabase.co"
+    static let supabaseAnonKey = "YOUR_SUPABASE_ANON_KEY_HERE"
+    
+    // REPLACE WITH YOUR GOOGLE CLIENT ID
+    static let googleClientID = "YOUR_GOOGLE_CLIENT_ID_HERE"
+} 

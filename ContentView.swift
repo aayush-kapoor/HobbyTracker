@@ -51,7 +51,7 @@ struct ContentView: View {
         NavigationSplitView {
             // Sidebar with hobbies list
             List(hobbyManager.hobbies) { hobby in
-                HobbyRowView(hobby: hobby, isSelected: hobbyManager.selectedHobby?.id == hobby.id ? true : false)
+                HobbyRowView(hobby: hobby, isSelected: hobbyManager.selectedHobby?.id == hobby.id ? true : false, hobbyManager: hobbyManager)
                     .onTapGesture {
                         hobbyManager.selectHobby(hobby)
                     }

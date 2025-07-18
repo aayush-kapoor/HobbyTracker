@@ -40,33 +40,40 @@ struct HobbyDetailView: View {
     // COMMENTED OUT: Session-related state variables
     // @State private var showingSessionNotes = false
     // @State private var sessionNotes = ""
+    @State private var rankingUpdateTimer: Timer?
     
     // Use stored theme from hobby model
     private var theme: VisualTheme {
         return VisualTheme.from(hobby.theme)
     }
     
+    // Cast to SupabaseHobbyManager for ranking access
+    private var supabaseHobbyManager: SupabaseHobbyManager? {
+        return hobbyManager as? SupabaseHobbyManager
+    }
+    
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
+        ZStack {
+            VStack(spacing: 0) {
+                Spacer()
             
-            // Hobby name pill
-            HStack {
-                // Icon based on hobby type
-                Image(systemName: getHobbyIcon())
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(theme.textColor)
+                // Hobby name pill
+                HStack {
+                    // Icon based on hobby type
+                    Image(systemName: getHobbyIcon())
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(theme.textColor)
+                    
+                    Text(hobby.name)
+                        .font(.system(size: 22, weight: .bold, design: .default))
+                        .foregroundColor(theme.textColor)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(theme.otherButtonColor)
+                .cornerRadius(25)
                 
-                Text(hobby.name)
-                    .font(.system(size: 22, weight: .bold, design: .default))
-                    .foregroundColor(theme.textColor)
-            }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 12)
-            .background(theme.otherButtonColor)
-            .cornerRadius(25)
-            
-            Spacer()
+                Spacer()
             
             // Large timer display - shows total time for hobby
             VStack(spacing: 8) {
@@ -107,8 +114,63 @@ struct HobbyDetailView: View {
             
             Spacer()
         }
+        
+        // Ranking display in top-right corner
+        VStack {
+            HStack {
+                Spacer()
+                
+                if let rank = supabaseHobbyManager?.getRankForHobby(hobby.name) {
+                    Text("#\(rank)")
+                        .font(.system(size: 20, weight: .black, design: .default))
+                        .foregroundColor(theme.textColor)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(theme.startStopButtonColor)
+                        .cornerRadius(20)
+                        .shadow(color: theme.textColor.opacity(0.2), radius: 4, x: 0, y: 2)
+                } else if supabaseHobbyManager?.isLoadingRankings == true {
+                    Text("--")
+                        .font(.system(size: 20, weight: .black, design: .default))
+                        .foregroundColor(theme.textColor.opacity(0.6))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(theme.otherButtonColor)
+                        .cornerRadius(20)
+                }
+            }
+            .padding(.top, 60) // Safe area padding for top
+            .padding(.trailing, 20)
+            
+            Spacer()
+        }
+    }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.backgroundColor)
+        .onAppear {
+            // Load ranking when view appears
+            Task {
+                await supabaseHobbyManager?.updateRankingForHobby(hobby.name)
+            }
+        }
+        .onDisappear {
+            // Clean up timer when view disappears
+            rankingUpdateTimer?.invalidate()
+            rankingUpdateTimer = nil
+        }
+        .onChange(of: hobbyManager.isTracking(hobby: hobby)) { isTracking in
+            if isTracking {
+                // Start periodic ranking updates while tracking
+                startRankingUpdates()
+            } else {
+                // Stop ranking updates when not tracking
+                stopRankingUpdates()
+                // Update ranking one final time when tracking stops
+                Task {
+                    await supabaseHobbyManager?.updateRankingForHobby(hobby.name)
+                }
+            }
+        }
         
         // COMMENTED OUT: Session notes functionality
         /*
@@ -126,6 +188,22 @@ struct HobbyDetailView: View {
             )
         }
         */
+    }
+    
+    // MARK: - Ranking Update Methods
+    
+    private func startRankingUpdates() {
+        // Update rankings every 30 seconds while tracking
+        rankingUpdateTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { _ in
+            Task {
+                await supabaseHobbyManager?.updateRankingForHobby(hobby.name)
+            }
+        }
+    }
+    
+    private func stopRankingUpdates() {
+        rankingUpdateTimer?.invalidate()
+        rankingUpdateTimer = nil
     }
     
     private var formattedHobbyTotalTime: String {

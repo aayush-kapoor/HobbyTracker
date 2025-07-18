@@ -2,9 +2,41 @@ import Foundation
 import SwiftUI
 import Supabase
 
+// MARK: - Ranking Models
+
+struct HobbyRanking: Codable {
+    let userId: String
+    let rank: Int
+    let totalTime: TimeInterval
+    let hobbyName: String
+    
+    init(userId: String, rank: Int, totalTime: TimeInterval, hobbyName: String) {
+        self.userId = userId
+        self.rank = rank
+        self.totalTime = totalTime
+        self.hobbyName = hobbyName
+    }
+}
+
+struct UserRanking: Codable {
+    let userId: String
+    let userName: String?
+    let totalTime: TimeInterval
+    
+    private enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case userName = "user_name"
+        case totalTime = "total_time"
+    }
+}
+
 class SupabaseHobbyManager: HobbyManager {
     private let supabase: SupabaseClient
     private let authManager: AuthManager
+    
+    // Published ranking state
+    @Published var currentHobbyRankings: [String: Int] = [:] // hobbyName -> rank
+    @Published var isLoadingRankings: Bool = false
     
     init(authManager: AuthManager) {
         self.authManager = authManager
@@ -47,6 +79,9 @@ class SupabaseHobbyManager: HobbyManager {
                 .value
             
             self.hobbies = response.map { $0.toHobby() }
+            
+            // Load rankings for all hobbies after loading hobbies
+            await loadRankingsForAllHobbies()
             
         } catch {
             print("Error loading hobbies: \(error)")
@@ -101,6 +136,177 @@ class SupabaseHobbyManager: HobbyManager {
         }
     }
     
+    func addSession(to hobby: Hobby, session: TimeSession) {
+        Task { @MainActor in
+            guard let hobbyIndex = hobbies.firstIndex(where: { $0.id == hobby.id }) else { return }
+            
+            hobbies[hobbyIndex].sessions.append(session)
+            hobbies[hobbyIndex].totalTime += session.duration
+            
+            updateHobby(hobbies[hobbyIndex])
+            
+            // Update rankings after adding session
+            await updateRankingForHobby(hobbies[hobbyIndex].name)
+        }
+    }
+    
+    // MARK: - Ranking System
+    
+    @MainActor
+    func loadRankingsForAllHobbies() async {
+        isLoadingRankings = true
+        defer { isLoadingRankings = false }
+        
+        print("🚀 Loading rankings for all hobbies...")
+        
+        // Debug: Print all hobbies data first
+        await debugAllHobbiesRankings()
+        
+        for hobby in hobbies {
+            print("\n🔄 Processing ranking for: '\(hobby.name)'")
+            await updateRankingForHobby(hobby.name)
+        }
+        
+        print("\n✅ Finished loading all rankings")
+        print("🏆 Current rankings: \(currentHobbyRankings)")
+    }
+    
+    @MainActor
+    func updateRankingForHobby(_ hobbyName: String) async {
+        guard let currentUserId = authManager.currentUser?.id.uuidString else { return }
+        
+        do {
+            print("🔍 Fetching ALL users' hobbies for ranking '\(hobbyName)'...")
+            print("👤 Current user ID: \(currentUserId.prefix(8))...")
+            
+            // Ensure we get ALL hobbies from ALL users, not just current user
+            // Remove any potential user filtering by explicitly not filtering by user_id
+            let allHobbiesResponse: [SupabaseHobby] = try await supabase
+                .from("hobbies")
+                .select("*")  // Select all columns explicitly
+                .execute()
+                .value
+            
+            print("📊 Total hobbies from ALL users: \(allHobbiesResponse.count)")
+            print("👥 All users in database:")
+            let uniqueUsers = Set(allHobbiesResponse.map { $0.userId })
+            for userId in uniqueUsers {
+                let isCurrentUser = userId.lowercased() == currentUserId.lowercased() ? "← CURRENT USER" : ""
+                print("   User: \(userId.prefix(8))... \(isCurrentUser)")
+            }
+            
+            // Filter for matching hobby names (case-insensitive)
+            let response = allHobbiesResponse
+                .filter { $0.name.lowercased() == hobbyName.lowercased() }
+                .sorted { $0.totalTime > $1.totalTime }  // Sort by time descending
+            
+            print("🔍 Ranking debug for '\(hobbyName)':")
+            print("📊 Found \(response.count) hobbies with this name across ALL users")
+            
+            // Debug: Print all found hobbies
+            for (index, hobby) in response.enumerated() {
+                let isCurrentUser = hobby.userId.lowercased() == currentUserId.lowercased() ? "← YOU" : ""
+                print("   \(index + 1). User: \(hobby.userId.prefix(8))..., Time: \(hobby.totalTime)s, Name: '\(hobby.name)' \(isCurrentUser)")
+            }
+            
+            // Calculate rankings
+            var currentRank = 1
+            var actualRank: Int? = nil
+            var foundCurrentUser = false
+            
+            for (index, hobbyData) in response.enumerated() {
+                // Update rank only when time changes (handle ties)
+                if index > 0 && hobbyData.totalTime < response[index - 1].totalTime {
+                    currentRank = index + 1
+                }
+                
+                print("🔍 Comparing users:")
+                print("   hobbyData.userId: '\(hobbyData.userId)'")
+                print("   currentUserId: '\(currentUserId)'")
+                print("   Are they equal? \(hobbyData.userId.lowercased() == currentUserId.lowercased())")
+                
+                // Case-insensitive comparison for UUID matching
+                if hobbyData.userId.lowercased() == currentUserId.lowercased() {
+                    actualRank = currentRank
+                    foundCurrentUser = true
+                    print("✅ Found current user rank: #\(actualRank!) with \(hobbyData.totalTime)s")
+                    break
+                }
+            }
+            
+            // Handle case where current user doesn't have this hobby yet
+            if !foundCurrentUser {
+                print("⚠️ Current user doesn't have this hobby yet - no ranking to display")
+                // Don't set any ranking - leave it nil so no rank is displayed
+                currentHobbyRankings.removeValue(forKey: hobbyName.lowercased())
+                return
+            }
+            
+            // Update the ranking for this hobby
+            if let rank = actualRank {
+                currentHobbyRankings[hobbyName.lowercased()] = rank
+                print("🏆 Set rank for '\(hobbyName)': #\(rank)")
+            }
+            
+        } catch {
+            print("❌ Error calculating ranking for \(hobbyName): \(error)")
+            print("📊 Error details: \(error.localizedDescription)")
+        }
+    }
+    
+    // Debug method to test ranking system
+    @MainActor
+    func debugAllHobbiesRankings() async {
+        print("🔧 DEBUG: All hobbies rankings")
+        
+        do {
+            // Explicitly fetch ALL hobbies from ALL users
+            let allHobbies: [SupabaseHobby] = try await supabase
+                .from("hobbies")
+                .select("*")  // Select all columns explicitly
+                .execute()
+                .value
+            
+            print("📋 Total hobbies in database from ALL users: \(allHobbies.count)")
+            
+            // Show unique users
+            let uniqueUsers = Set(allHobbies.map { $0.userId })
+            print("👥 Unique users in database: \(uniqueUsers.count)")
+            for userId in uniqueUsers {
+                print("   User: \(userId.prefix(8))...")
+            }
+            
+            // Group by hobby name (case-insensitive)
+            var hobbyGroups: [String: [SupabaseHobby]] = [:]
+            for hobby in allHobbies {
+                let key = hobby.name.lowercased()
+                if hobbyGroups[key] == nil {
+                    hobbyGroups[key] = []
+                }
+                hobbyGroups[key]?.append(hobby)
+            }
+            
+            print("🏷️ Unique hobby names: \(hobbyGroups.keys.sorted())")
+            
+            for (hobbyName, hobbies) in hobbyGroups {
+                print("\n📊 Hobby: '\(hobbyName)' (\(hobbies.count) users)")
+                let sortedHobbies = hobbies.sorted { $0.totalTime > $1.totalTime }
+                for (index, hobby) in sortedHobbies.enumerated() {
+                    print("   Rank #\(index + 1): User \(hobby.userId.prefix(8))... - \(hobby.totalTime)s - '\(hobby.name)'")
+                }
+            }
+            
+        } catch {
+            print("❌ Debug error: \(error)")
+            print("📊 Debug error details: \(error.localizedDescription)")
+        }
+    }
+    
+    func getRankForHobby(_ hobbyName: String) -> Int? {
+        return currentHobbyRankings[hobbyName.lowercased()]
+    }
+    
+    // Override updateHobby to trigger ranking updates
     override func updateHobby(_ hobby: Hobby) {
         let hobbyToUpdate = hobby
         
@@ -119,20 +325,33 @@ class SupabaseHobbyManager: HobbyManager {
                     }
                 }
                 
+                // Update ranking after hobby time changes
+                await updateRankingForHobby(hobbyToUpdate.name)
+                
             } catch {
                 print("Error updating hobby: \(error)")
             }
         }
     }
     
-    func addSession(to hobby: Hobby, session: TimeSession) {
+    // Override pause tracking to update rankings when session ends
+    override func pauseTracking(for hobby: Hobby) {
+        super.pauseTracking(for: hobby)
+        
+        // Update ranking after tracking session ends
+        Task {
+            await updateRankingForHobby(hobby.name)
+        }
+    }
+    
+    // Real-time ranking refresh for currently tracking hobbies
+    func refreshRankingsForActiveHobbies() {
         Task { @MainActor in
-            guard let hobbyIndex = hobbies.firstIndex(where: { $0.id == hobby.id }) else { return }
-            
-            hobbies[hobbyIndex].sessions.append(session)
-            hobbies[hobbyIndex].totalTime += session.duration
-            
-            updateHobby(hobbies[hobbyIndex])
+            for hobby in hobbies {
+                if isTracking(hobby: hobby) {
+                    await updateRankingForHobby(hobby.name)
+                }
+            }
         }
     }
     

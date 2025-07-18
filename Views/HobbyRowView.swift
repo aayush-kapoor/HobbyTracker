@@ -101,7 +101,7 @@ struct HobbyRowView: View {
     private func moveProgress() {
         invalidateTimer()
         deleteProgress = 0.0
-        print("🟥 Starting delete animation - moveProgress called")
+        // print("Starting delete animation - moveProgress called")
         
         progressTimer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: true) { _ in
             if isPressing && deleteProgress < 1.2 {
@@ -109,14 +109,14 @@ struct HobbyRowView: View {
                     withAnimation(.easeInOut) {
                         deleteProgress += 0.01  // EXACT same increment as HoldButton
                     }
-                    print("📊 Delete progress: \(deleteProgress)")
+                    // print("📊 Delete progress: \(deleteProgress)")
                 }
             } else {
                 deleteProgress = min(deleteProgress, 1.2)  // EXACT same as HoldButton
                 progressTimer?.invalidate()
-                print("⚠️ Timer stopped - isPressing: \(isPressing), progress: \(deleteProgress)")
+                // print("⚠️ Timer stopped - isPressing: \(isPressing), progress: \(deleteProgress)")
                 if deleteProgress >= 1.2 {
-                    print("🎯 Progress reached 1.2 - calling performDeletion")
+                    // print("🎯 Progress reached 1.2 - calling performDeletion")
                     performDeletion()  // Our version of performCompletionAnimation
                 }
             }
@@ -126,7 +126,7 @@ struct HobbyRowView: View {
     // EXACT same function as HoldButton
     private func resetProgress() {
         invalidateTimer()
-        print("❌ Reset progress called")
+        // print("❌ Reset progress called")
         DispatchQueue.main.async {
             withAnimation(.easeInOut) {
                 deleteProgress = 0.0
@@ -136,11 +136,11 @@ struct HobbyRowView: View {
     
     // Our version of performCompletionAnimation
     private func performDeletion() {
-        print("🗑️ Delete animation completed - deleting hobby: \(hobby.name)")
+        // print("🗑️ Delete animation completed - deleting hobby: \(hobby.name)")
         hobbyManager.deleteHobby(hobby)
         // Reset state
         deleteProgress = 0.0
-        print("✅ Hobby deletion completed")
+        // print("Hobby deletion completed")
     }
     
     // EXACT same function as HoldButton

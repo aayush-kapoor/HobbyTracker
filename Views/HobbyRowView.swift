@@ -9,6 +9,7 @@ struct HobbyRowView: View {
     @State private var deleteProgress: CGFloat = 0.0  // EXACT same as HoldButton
     @State private var showDeleteIcon: Bool = false
     @State private var progressTimer: Timer?
+    @Environment(\.colorScheme) var colorScheme  // Add color scheme detection
     
     private let longPressDuration: Double = 2.0 // Duration for long press to complete
     
@@ -17,13 +18,13 @@ struct HobbyRowView: View {
             // Hobby icon instead of color circle
             Image(systemName: getHobbyIcon())
                 .font(.system(size: 16, weight: .medium))
-                .foregroundColor(isSelected ? .white : .primary)
+                .foregroundColor(selectedTextColor)
                 .frame(width: 20, height: 20)
             
             // Hobby name only (no total time)
             Text(hobby.name)
                 .font(.system(size: 16, weight: .medium))
-                .foregroundColor(isSelected ? .white : .primary)
+                .foregroundColor(selectedTextColor)
                 .lineLimit(1)
             
             Spacer()
@@ -32,7 +33,7 @@ struct HobbyRowView: View {
             if showDeleteIcon {
                 Image(systemName: "trash.fill")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(isPressing ? .white : (isSelected ? .white : .secondary))
+                    .foregroundColor(trashIconColor)
                     .frame(width: 16, height: 16)
                     .gesture(longPressGesture)  // EXACT same as HoldButton
                     .onChange(of: isPressing) { handlePressChange() }  // EXACT same as HoldButton
@@ -73,7 +74,7 @@ struct HobbyRowView: View {
                     startPoint: .trailing,
                     endPoint: .leading
                 ),
-                lineWidth: deleteProgress == 1.0 ? 0 : 2
+                lineWidth: deleteProgress == 1.2 ? 0 : 2
             )
             .shadow(color: Color.red.opacity(0.5), radius: 10, x: 0, y: 0)
             .animation(.easeInOut, value: deleteProgress)
@@ -155,6 +156,26 @@ struct HobbyRowView: View {
             return Color.primary.opacity(0.1)
         } else {
             return Color.clear
+        }
+    }
+    
+    // Adaptive text color for selected state
+    private var selectedTextColor: Color {
+        if isSelected {
+            return colorScheme == .dark ? .white : Color.primary
+        } else {
+            return .primary
+        }
+    }
+    
+    // Adaptive trash icon color
+    private var trashIconColor: Color {
+        if isPressing {
+            return colorScheme == .dark ? .white : Color.primary
+        } else if isSelected {
+            return colorScheme == .dark ? .white : Color.primary
+        } else {
+            return .secondary
         }
     }
     

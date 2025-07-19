@@ -17,6 +17,10 @@ struct Hobby: Identifiable, Codable {
     var sessions: [TimeSession]
     var createdDate: Date
     
+    // Background tracking persistence
+    var isCurrentlyTracking: Bool // Whether this hobby is actively being tracked
+    var trackingStartTime: Date? // When current tracking session started
+    
     init(name: String, description: String = "", color: String = "#007AFF", theme: HobbyTheme = .green, userId: String? = nil, id: UUID = UUID()) {
         self.id = id
         self.name = name
@@ -27,6 +31,8 @@ struct Hobby: Identifiable, Codable {
         self.totalTime = 0
         self.sessions = []
         self.createdDate = Date()
+        self.isCurrentlyTracking = false
+        self.trackingStartTime = nil
     }
     
     var formattedTotalTime: String {

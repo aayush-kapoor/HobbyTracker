@@ -38,6 +38,10 @@ class SupabaseHobbyManager: HobbyManager {
     @Published var currentHobbyRankings: [String: Int] = [:] // hobbyName -> rank
     @Published var isLoadingRankings: Bool = false
     
+    // Background tracking timer management (since parent's are private)
+    private var backgroundTrackingStartTimes: [UUID: Date] = [:]
+    private var backgroundTimers: [UUID: Timer] = [:]
+    
     init(authManager: AuthManager) {
         self.authManager = authManager
         // Use configuration file
@@ -80,12 +84,54 @@ class SupabaseHobbyManager: HobbyManager {
             
             self.hobbies = response.map { $0.toHobby() }
             
+            // Resume any active tracking sessions after loading hobbies
+            await resumeActiveTrackingSessions()
+            
             // Load rankings for all hobbies after loading hobbies
             await loadRankingsForAllHobbies()
             
         } catch {
             print("Error loading hobbies: \(error)")
         }
+    }
+    
+    // Resume tracking sessions that were active when app was closed
+    @MainActor
+    private func resumeActiveTrackingSessions() async {
+        for hobby in hobbies {
+            if hobby.isCurrentlyTracking, let backgroundStartTime = hobby.trackingStartTime {
+                // Set up local tracking state to match background state
+                trackingStates[hobby.id] = true
+                backgroundTrackingStartTimes[hobby.id] = backgroundStartTime  // Use our own property
+                
+                // Calculate current elapsed time including background time
+                let backgroundTime = Date().timeIntervalSince(backgroundStartTime)
+                currentElapsedTimes[hobby.id] = hobby.totalTime + backgroundTime
+                
+                // Start the UI update timer
+                let hobbyId = hobby.id
+                let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+                    DispatchQueue.main.async {
+                        guard let self = self else { return }
+                        if let hobbyIndex = self.hobbies.firstIndex(where: { $0.id == hobbyId }) {
+                            let currentHobby = self.hobbies[hobbyIndex]
+                            self.updateElapsedTimeForBackgroundHobby(currentHobby, originalStartTime: backgroundStartTime)
+                        }
+                    }
+                }
+                backgroundTimers[hobby.id] = timer
+            }
+        }
+    }
+    
+    // Custom elapsed time update for hobbies resumed from background
+    @MainActor
+    private func updateElapsedTimeForBackgroundHobby(_ hobby: Hobby, originalStartTime: Date) {
+        guard self.isTracking(hobby: hobby) else { return }
+        
+        // Calculate total elapsed time from original background start time
+        let totalElapsedTime = Date().timeIntervalSince(originalStartTime)
+        self.currentElapsedTimes[hobby.id] = hobby.totalTime + totalElapsedTime
     }
     
     override func addHobby(_ hobby: Hobby) {
@@ -249,12 +295,94 @@ class SupabaseHobbyManager: HobbyManager {
     
     // Override pause tracking to update rankings when session ends
     override func pauseTracking(for hobby: Hobby) {
+        // Calculate total elapsed time including background time
+        if let index = hobbies.firstIndex(where: { $0.id == hobby.id }),
+           let startTime = hobbies[index].trackingStartTime {
+            
+            // Calculate total session time (background + active)
+            let totalSessionTime = Date().timeIntervalSince(startTime)
+            hobbies[index].totalTime += totalSessionTime
+            
+            // Clear tracking state
+            hobbies[index].isCurrentlyTracking = false
+            hobbies[index].trackingStartTime = nil
+            
+            // Save to database
+            updateHobby(hobbies[index])
+        }
+        
+        // Clean up our background timers
+        backgroundTimers[hobby.id]?.invalidate()
+        backgroundTimers.removeValue(forKey: hobby.id)
+        backgroundTrackingStartTimes.removeValue(forKey: hobby.id)
+        
+        // Update local tracking state
         super.pauseTracking(for: hobby)
         
         // Update ranking after tracking session ends
         Task {
             await updateRankingForHobby(hobby.name)
         }
+    }
+    
+    // Override start tracking to persist state to database
+    override func startTracking(for hobby: Hobby) {
+        // If already tracking locally, don't restart
+        if super.isTracking(hobby: hobby) { return }
+        
+        // Check if this hobby is already tracking in background (database state)
+        if let index = hobbies.firstIndex(where: { $0.id == hobby.id }),
+           hobbies[index].isCurrentlyTracking {
+            // Resume background tracking by syncing local state
+            if let backgroundStartTime = hobbies[index].trackingStartTime {
+                trackingStates[hobby.id] = true
+                backgroundTrackingStartTimes[hobby.id] = backgroundStartTime
+                
+                let backgroundTime = Date().timeIntervalSince(backgroundStartTime)
+                currentElapsedTimes[hobby.id] = hobbies[index].totalTime + backgroundTime
+                
+                let hobbyId = hobby.id
+                let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+                    DispatchQueue.main.async {
+                        guard let self = self else { return }
+                        if let hobbyIndex = self.hobbies.firstIndex(where: { $0.id == hobbyId }) {
+                            let currentHobby = self.hobbies[hobbyIndex]
+                            self.updateElapsedTimeForBackgroundHobby(currentHobby, originalStartTime: backgroundStartTime)
+                        }
+                    }
+                }
+                backgroundTimers[hobby.id] = timer
+            }
+            return
+        }
+        
+        // Start new tracking session
+        super.startTracking(for: hobby)
+        
+        // Update hobby with tracking state and save to database
+        if let index = hobbies.firstIndex(where: { $0.id == hobby.id }) {
+            hobbies[index].isCurrentlyTracking = true
+            hobbies[index].trackingStartTime = Date()
+            
+            // Save tracking state to database
+            updateHobby(hobbies[index])
+        }
+    }
+    
+    // Override elapsed time calculation to handle background tracking
+    override func currentElapsedTime(for hobby: Hobby) -> TimeInterval {
+        // Use parent implementation now that local state is properly synced
+        // The timer-based currentElapsedTimes will be accurate for both local and resumed background tracking
+        return super.currentElapsedTime(for: hobby)
+    }
+    
+    // Override isTracking to check persistent state
+    override func isTracking(hobby: Hobby) -> Bool {
+        // Check both local state and persistent state
+        if let index = hobbies.firstIndex(where: { $0.id == hobby.id }) {
+            return hobbies[index].isCurrentlyTracking || super.isTracking(hobby: hobby)
+        }
+        return super.isTracking(hobby: hobby)
     }
     
     // Real-time ranking refresh for currently tracking hobbies
@@ -268,6 +396,26 @@ class SupabaseHobbyManager: HobbyManager {
         }
     }
     
+    // Override cancel tracking to clear persistent state
+    override func cancelTracking(for hobby: Hobby) {
+        // Clear persistent tracking state
+        if let index = hobbies.firstIndex(where: { $0.id == hobby.id }) {
+            hobbies[index].isCurrentlyTracking = false
+            hobbies[index].trackingStartTime = nil
+            
+            // Save to database
+            updateHobby(hobbies[index])
+        }
+        
+        // Clean up our background timers
+        backgroundTimers[hobby.id]?.invalidate()
+        backgroundTimers.removeValue(forKey: hobby.id)
+        backgroundTrackingStartTimes.removeValue(forKey: hobby.id)
+        
+        // Cancel local tracking
+        super.cancelTracking(for: hobby)
+    }
+    
     // Private methods to prevent UserDefaults usage (parent class methods are private)
     private func saveHobbies() {
         // Do nothing - Supabase handles persistence
@@ -275,6 +423,11 @@ class SupabaseHobbyManager: HobbyManager {
     
     private func loadHobbies() {
         // Do nothing - hobbies are loaded from Supabase
+    }
+    
+    deinit {
+        // Clean up background timers
+        backgroundTimers.values.forEach { $0.invalidate() }
     }
 }
 
@@ -290,12 +443,16 @@ struct SupabaseHobby: Codable {
     let totalTime: TimeInterval
     let sessions: [SupabaseTimeSession]
     let createdDate: Date
+    let isCurrentlyTracking: Bool
+    let trackingStartTime: Date?
     
     private enum CodingKeys: String, CodingKey {
         case id, name, description, color, theme, sessions
         case userId = "user_id"
         case totalTime = "total_time"
         case createdDate = "created_date"
+        case isCurrentlyTracking = "is_currently_tracking"
+        case trackingStartTime = "tracking_start_time"
     }
     
     static func from(hobby: Hobby) -> SupabaseHobby {
@@ -308,7 +465,9 @@ struct SupabaseHobby: Codable {
             theme: hobby.theme.rawValue,
             totalTime: hobby.totalTime,
             sessions: hobby.sessions.map { SupabaseTimeSession.from(session: $0) },
-            createdDate: hobby.createdDate
+            createdDate: hobby.createdDate,
+            isCurrentlyTracking: hobby.isCurrentlyTracking,
+            trackingStartTime: hobby.trackingStartTime
         )
     }
     
@@ -320,6 +479,8 @@ struct SupabaseHobby: Codable {
         hobby.totalTime = totalTime
         hobby.sessions = sessions.map { $0.toTimeSession() }
         hobby.createdDate = createdDate
+        hobby.isCurrentlyTracking = isCurrentlyTracking
+        hobby.trackingStartTime = trackingStartTime
         return hobby
     }
 }

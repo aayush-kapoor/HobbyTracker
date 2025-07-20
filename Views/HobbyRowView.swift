@@ -13,13 +13,53 @@ struct HobbyRowView: View {
     
     private let longPressDuration: Double = 2.0 // Duration for long press to complete
     
+    // Theme colors for hobby icon background
+    private var hobbyIconBackgroundColor: Color {
+        switch hobby.theme {
+        case .red:
+            return colorScheme == .dark 
+                ? Color(hex: "#FF7C7C").opacity(0.15)  // Darker red with low opacity for dark mode
+                : Color(hex: "#FFD9D9").opacity(0.4)   // Light red with medium opacity for light mode
+        case .green:
+            return colorScheme == .dark 
+                ? Color(hex: "#8CE8A1").opacity(0.15)  // Darker green with low opacity for dark mode
+                : Color(hex: "#DAFAE0").opacity(0.4)   // Light green with medium opacity for light mode  
+        case .blue:
+            return colorScheme == .dark 
+                ? Color(hex: "#8BCAFF").opacity(0.15)  // Darker blue with low opacity for dark mode
+                : Color(hex: "#D9EEFF").opacity(0.4)   // Light blue with medium opacity for light mode
+        }
+    }
+    
+    // Icon foreground color based on theme
+    private var hobbyIconForegroundColor: Color {
+        switch hobby.theme {
+        case .red:
+            return colorScheme == .dark 
+                ? Color(hex: "#FF7C7C") 
+                : Color(hex: "#994747")
+        case .green:
+            return colorScheme == .dark 
+                ? Color(hex: "#8CE8A1") 
+                : Color(hex: "#559D66")
+        case .blue:
+            return colorScheme == .dark 
+                ? Color(hex: "#8BCAFF") 
+                : Color(hex: "#366B98")
+        }
+    }
+    
     var body: some View {
         HStack(spacing: 12) {
             // Hobby icon instead of color circle
             Image(systemName: getHobbyIcon())
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(selectedTextColor)
-                .frame(width: 20, height: 20)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(hobbyIconForegroundColor)
+                .frame(width: 28, height: 28)
+                // .background(
+                //     Circle()
+                //         .fill(hobbyIconBackgroundColor)
+                // )
             
             // Hobby name only (no total time)
             Text(hobby.name)

@@ -12,6 +12,17 @@ struct AddHobbyView: View {
         "#96CEB4", "#FECA57", "#FF9FF3", "#54A0FF"
     ]
     
+    // Extract save logic into a function for reuse
+    private func saveHobby() {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+        
+        let randomColor = colors.randomElement() ?? "#007AFF"
+        let hobby = Hobby(name: trimmedName, description: "", color: randomColor)
+        hobbyManager.addHobby(hobby)
+        dismiss()
+    }
+    
     var body: some View {
         VStack(spacing: 30) {
             // Title
@@ -25,6 +36,9 @@ struct AddHobbyView: View {
                     .font(.system(size: 20, weight: .regular))
                     .textFieldStyle(UnderlinedTextFieldStyle())
                     .focused($isTextFieldFocused)
+                    .onSubmit {
+                        saveHobby()  // Save when Enter key is pressed
+                    }
             }
             
             Spacer()
@@ -44,14 +58,7 @@ struct AddHobbyView: View {
                 .buttonStyle(.plain)
                 .contentShape(Rectangle())
                 
-                Button(action: {
-                    let randomColor = colors.randomElement() ?? "#007AFF"
-                    let hobby = Hobby(name: name.trimmingCharacters(in: .whitespacesAndNewlines), 
-                                    description: "", 
-                                    color: randomColor)
-                    hobbyManager.addHobby(hobby)
-                    dismiss()
-                }) {
+                Button(action: saveHobby) {  // Use the extracted function
                     Text("Save")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(

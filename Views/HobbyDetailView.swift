@@ -121,14 +121,24 @@ struct HobbyDetailView: View {
                 Spacer()
                 
                 if let rank = supabaseHobbyManager?.getRankForHobby(hobby.name) {
-                    Text("#\(rank)")
-                        .font(.system(size: 20, weight: .black, design: .default))
-                        .foregroundColor(theme.textColor)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(theme.startStopButtonColor)
-                        .cornerRadius(20)
-                        .shadow(color: theme.textColor.opacity(0.2), radius: 4, x: 0, y: 2)
+                    // Show trophy icons for top 3 ranks, text for others
+                    if rank <= 3 {
+                        Image("rank-\(rank)")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 48, height: 48)
+                            .padding(.horizontal, 10)
+                            // .shadow(color: theme.textColor.opacity(0.2), radius: 4, x: 0, y: 2)
+                    } else {
+                        Text("#\(rank)")
+                            .font(.system(size: 20, weight: .black, design: .default))
+                            .foregroundColor(theme.textColor)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(theme.otherButtonColor)
+                            .cornerRadius(20)
+                            // .shadow(color: theme.textColor.opacity(0.2), radius: 4, x: 0, y: 2)
+                    }
                 } else if supabaseHobbyManager?.isLoadingRankings == true {
                     Text("--")
                         .font(.system(size: 20, weight: .black, design: .default))
